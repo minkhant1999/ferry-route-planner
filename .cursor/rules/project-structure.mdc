@@ -1,0 +1,93 @@
+---
+description: React (Vite) SPA folder layout — features, store, shared components, and assets
+alwaysApply: true
+---
+
+# Project structure — React (Vite) SPA
+
+Organize by **feature domain** first; keep shared code in top-level folders. Use the `@/` path alias for `src/`.
+
+## Root layout
+
+```
+.
+├── .env                  # local API URL and app vars
+├── .env.uat
+├── .env.prod
+├── public/               # static files served as-is (favicon, robots.txt)
+└── src/
+    ├── main.tsx
+    ├── App.tsx
+    ├── routes/           # route config only (paths, lazy imports)
+    ├── layouts/          # app shells (AuthLayout, DashboardLayout)
+    ├── pages/            # thin route entry points — compose features
+    ├── features/         # domain modules (users, orders, auth, …)
+    ├── components/       # shared UI wrappers (see antd rule)
+    ├── store/
+    │   ├── api/          # baseApi + injectEndpoints per domain
+    │   ├── features/     # slices + createAsyncThunk (non-HTTP only)
+    │   ├── index.ts
+    │   └── hooks.ts
+    ├── hooks/            # app-wide hooks (not tied to one feature)
+    ├── utils/
+    ├── constants/
+    ├── types/            # shared types only
+    └── assets/           # imported assets (.webp images, fonts)
+```
+
+## Feature module
+
+One folder per domain. Colocate what belongs together:
+
+```
+src/features/users/
+├── components/     # UsersTable, UserForm — feature-only UI
+├── schemas/        # Zod schemas for forms (react-hook-form rule)
+├── types.ts
+├── hooks/          # feature-specific hooks
+└── index.ts        # public exports for other features/pages
+```
+
+- **Pages stay thin** — wire routes, layouts, and feature exports; avoid business logic in `pages/`.
+- **API** — one file per domain under `store/api/` (e.g. `usersApi.ts`), not inside `features/`.
+- **Forms** — schema in `features/<name>/schemas/`; use shared `FormInput` / `FormSelect` from `@/components`.
+
+## Where things go
+
+| Kind | Location |
+|------|----------|
+| HTTP / RTK Query | `store/api/` |
+| Redux UI state (no HTTP) | `store/features/` |
+| Reusable Ant Design wrappers | `components/` |
+| Feature-specific UI | `features/<name>/components/` |
+| Route-level screens | `pages/` |
+| Images (imported in code) | `assets/` as `.webp` |
+| Env-specific config | `.env`, `.env.uat`, `.env.prod` |
+
+## Conventions
+
+- **Barrel exports** — `index.ts` in `components/`, each feature, and subfolders that are imported often.
+- **Naming** — PascalCase components; camelCase hooks/utils; `*Api.ts` for RTK endpoints; `*Slice.ts` for slices.
+- **Imports** — features import shared code via `@/`; avoid deep relative paths (`../../../`).
+- **Do not** — put API slices in `features/`, duplicate wrappers in pages, or scatter domain logic across `pages/` and `components/`.
+
+## Example — adding a “users” area
+
+```
+src/pages/UsersPage.tsx              # route entry
+src/features/users/components/UserList.tsx
+src/features/users/schemas/userFormSchema.ts
+src/store/api/usersApi.ts
+src/store/api/baseApi.ts             # tagTypes: ['User']
+```
+
+```tsx
+// ✅ GOOD — page composes feature + store hooks
+import { UserList } from '@/features/users';
+import { useGetUsersQuery } from '@/store/api/usersApi';
+
+export function UsersPage() {
+  const { data, isLoading } = useGetUsersQuery();
+  return <UserList users={data} loading={isLoading} />;
+}
+```

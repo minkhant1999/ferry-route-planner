@@ -1,0 +1,68 @@
+---
+description: Forms use React Hook Form with Zod validation; no useState/useEffect for form state
+alwaysApply: true
+---
+
+# Forms — React Hook Form + Zod
+
+All forms must use **react-hook-form**. Do not manage form state or side effects with `useState` or `useEffect`.
+
+## Stack
+
+- **State & submission**: `useForm`, `register`, `Controller`, `handleSubmit`, `formState`
+- **Validation**: **Zod** via `@hookform/resolvers/zod` (`zodResolver`)
+- **Reactive values**: `useWatch` only when the UI must react to field changes (conditional fields, live previews, cross-field logic). Prefer `watch()` inside handlers when a one-off read is enough.
+
+## Do not
+
+- Mirror form fields in `useState`
+- Sync defaults or reset logic in `useEffect` — use `defaultValues`, `reset`, or `values` from `useForm`
+- Use Yup, Joi, or hand-rolled validation instead of Zod
+- Reach for `useWatch` for every field — default to uncontrolled inputs via `register`
+
+## Pattern
+
+```tsx
+import { useForm, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  email: z.string().email(),
+  role: z.enum(['admin', 'user']),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+export function SignUpForm() {
+  const { register, handleSubmit, control, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: '', role: 'user' },
+  });
+
+  const role = useWatch({ control, name: 'role' });
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register('email')} />
+      {errors.email && <span>{errors.email.message}</span>}
+      {role === 'admin' && <AdminFields control={control} />}
+      <button type="submit">Submit</button>
+    </form>
+  );
+}
+```
+
+```tsx
+// ❌ BAD — local state duplicates the form
+const [email, setEmail] = useState('');
+useEffect(() => { setEmail(user.email); }, [user]);
+
+// ✅ GOOD — RHF owns the state
+const { register, reset } = useForm({ defaultValues: { email: user.email } });
+reset({ email: user.email }); // when user changes, not in useEffect unless unavoidable
+```
+
+## Controlled or third-party inputs
+
+Use `Controller` (or the library's RHF adapter) instead of wiring `value`/`onChange` through `useState`.

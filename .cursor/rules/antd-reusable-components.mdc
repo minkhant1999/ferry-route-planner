@@ -1,0 +1,100 @@
+---
+description: Reusable Ant Design wrappers (Input, Select, Dropdown, Button) with JSDoc hover docs
+alwaysApply: true
+---
+
+# UI — Reusable Ant Design components
+
+Use **project wrappers only** for Ant Design primitives. Feature code must not import `Input`, `Select`, `Dropdown`, or `Button` from `antd` directly.
+
+## Project structure
+
+```
+src/
+  components/
+    input/
+      FormInput.tsx
+      index.ts
+    select/
+      FormSelect.tsx
+      index.ts
+    dropdown/
+      FormDropdown.tsx
+      index.ts
+    button/
+      AppButton.tsx
+      index.ts
+    index.ts          # barrel: export * from './input', etc.
+    types.ts          # shared prop types (FormFieldProps, etc.)
+```
+
+- One folder per primitive; one primary export per file (`FormInput`, `FormSelect`, …).
+- Barrel `index.ts` in each folder and at `components/index.ts`.
+- Styling (Tailwind class strings, tokens) lives inside the wrapper, not in feature pages.
+
+## Do not
+
+- Import `Input`, `Select`, `Dropdown`, or `Button` from `antd` outside `components/{input,select,dropdown,button}/`.
+- Duplicate Ant Design wiring (labels, errors, `Controller`) in pages or feature modules.
+- Ship a wrapper without JSDoc — hover docs are required.
+
+## JSDoc (hover description)
+
+Every exported wrapper needs a JSDoc block **immediately above** the component. Use markdown so Cursor/VS Code shows a rich tooltip on hover.
+
+Required sections:
+
+1. **One-line summary** — what Ant Design primitive it wraps and how it integrates (e.g. react-hook-form).
+2. **`### What it does`** — 2–4 bullets (label/error UI, form sync, error styling, variants).
+3. **`@example`** — at least one copy-pasteable usage; add more for variants (password, disabled, etc.).
+
+```tsx
+/**
+ * Labeled form field using **Ant Design `Input`** (or `Input.Password`) connected to **react-hook-form** via `Controller`.
+ *
+ * ### What it does
+ * - Renders a label, the input, and an optional error line.
+ * - Syncs value and validation with your form through `control` and `name`.
+ * - Sets `status="error"` on the Ant Design input when `error` is set.
+ *
+ * @example Basic text field
+ * ```tsx
+ * <FormInput
+ *   control={control}
+ *   name="email"
+ *   id="email"
+ *   label="Email"
+ *   error={errors.email?.message}
+ *   autoComplete="email"
+ * />
+ * ```
+ *
+ * @example Password field
+ * ```tsx
+ * <FormInput
+ *   password
+ *   control={control}
+ *   name="password"
+ *   id="password"
+ *   label="Password"
+ *   error={errors.password?.message}
+ *   wrapperClassName="mb-8"
+ * />
+ * ```
+ */
+export function FormInput(props: FormInputProps) { /* ... */ }
+```
+
+Apply the same pattern to `FormSelect`, `FormDropdown`, and `AppButton` — adjust summary, bullets, and examples to match each primitive.
+
+## Usage in features
+
+```tsx
+// ❌ BAD — raw antd in a page
+import { Input, Button } from 'antd';
+
+// ✅ GOOD — project wrappers
+import { FormInput, AppButton } from '@/components';
+```
+
+Form wrappers use `Controller` from react-hook-form (see the forms rule). Non-form buttons may use simpler props but still live in `components/button/`.

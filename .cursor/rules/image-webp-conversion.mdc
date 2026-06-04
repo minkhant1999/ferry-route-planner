@@ -1,0 +1,57 @@
+---
+description: 
+alwaysApply: true
+---
+
+# Image format — WebP only
+
+When adding, updating, or referencing raster images in this project, use **WebP** instead of PNG, JPG, or JPEG.
+
+## When to convert
+
+- Any new `.png`, `.jpg`, or `.jpeg` file the user adds or asks you to add
+- Existing raster images you touch as part of a task (optimize assets, fix broken images, etc.)
+- Code or docs that reference `.png`/`.jpg`/`.jpeg` paths — update references to `.webp`
+
+## Workflow
+
+1. Convert the image to `.webp` (same basename, e.g. `hero.png` → `hero.webp`).
+2. **Delete** the original `.png`, `.jpg`, or `.jpeg` after a successful conversion.
+3. Update imports, URLs, HTML `src`, CSS `background-image`, markdown images, and config paths to point at `.webp`.
+
+## How to convert
+
+Prefer a lossy WebP suitable for photos; use lossless or higher quality for UI with sharp edges or transparency.
+
+```bash
+# macOS (Homebrew): brew install webp
+cwebp -q 80 input.jpg -o output.webp
+cwebp -lossless input.png -o output.webp
+
+# Node (if project has sharp): one-off or script
+npx sharp-cli -i input.png -o output.webp
+```
+
+If neither `cwebp` nor project tooling is available, install `webp` via the system package manager or add a minimal conversion step the user approves — do not leave duplicate raster formats in the repo.
+
+## Code and references
+
+```html
+<!-- ❌ BAD -->
+<img src="/images/logo.png" alt="Logo" />
+
+<!-- ✅ GOOD -->
+<img src="/images/logo.webp" alt="Logo" />
+```
+
+```tsx
+// ❌ BAD
+import banner from './assets/banner.jpeg';
+
+// ✅ GOOD
+import banner from './assets/banner.webp';
+```
+
+## Exceptions
+
+Do not convert when the user explicitly asks to keep PNG/JPEG (favicons, email assets, third-party bundles you must not modify). Say why and keep the requested format.

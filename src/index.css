@@ -1,0 +1,231 @@
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.leaflet-container {
+  font-family: inherit;
+  touch-action: pan-x pan-y;
+}
+
+/* Google Maps–style current location dot */
+.current-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.current-location-dot {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  margin: 3px;
+  background: #2563eb;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 6px rgba(37, 99, 235, 0.5);
+}
+
+.current-location-pulse {
+  position: absolute;
+  inset: -10px;
+  border: 2px solid rgba(37, 99, 235, 0.45);
+  border-radius: 50%;
+  animation: location-pulse 2s ease-out infinite;
+  pointer-events: none;
+}
+
+@keyframes location-pulse {
+  0% {
+    transform: scale(0.35);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* Picked point from map click */
+.picked-location-marker {
+  background: transparent !important;
+  border: none !important;
+}
+
+.picked-location-pin {
+  width: 14px;
+  height: 14px;
+  margin-left: 5px;
+  background: #dc2626;
+  border: 3px solid #fff;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Ant Design — touch-friendly on phones & tablets */
+@media (max-width: 1023px) {
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-select-selector,
+  .ant-btn:not(.ant-btn-sm):not(.ant-btn-icon-only) {
+    min-height: 44px;
+  }
+
+  .ant-select-selection-item,
+  .ant-select-selection-placeholder {
+    line-height: 42px !important;
+  }
+
+  .ant-card .ant-card-head {
+    padding: 12px 16px;
+    min-height: auto;
+  }
+
+  .ant-card .ant-card-head-title {
+    font-size: 1rem;
+    white-space: normal;
+    line-height: 1.35;
+  }
+
+  .ant-card .ant-card-body {
+    padding: 16px;
+  }
+
+  .ant-list-item {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ant-list-item-action {
+    margin-inline-start: 0 !important;
+    width: 100%;
+  }
+
+  .ant-list-item-action > li {
+    width: 100%;
+    padding: 0 !important;
+  }
+
+  .ant-list-item-action .ant-btn {
+    width: 100%;
+  }
+
+  .ant-segmented {
+    width: 100%;
+  }
+
+  .ant-segmented-group {
+    width: 100%;
+  }
+
+  .ant-segmented-item {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .ant-segmented-item-label {
+    min-height: 40px;
+    line-height: 40px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+}
+
+/* Page shell */
+.app-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .app-page {
+    gap: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .app-page {
+    gap: 1.5rem;
+  }
+}
+
+.app-card {
+  overflow: hidden;
+}
+
+.app-form-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .app-form-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+  }
+}
+
+/* Span all columns in the route create grid (bus stops, section titles, etc.) */
+.app-form-span-all {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
+.app-form-section {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.app-btn-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .app-btn-stack {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: auto;
+  }
+}
+
+.app-btn-stack .ant-btn {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .app-btn-stack .ant-btn {
+    width: auto;
+  }
+}

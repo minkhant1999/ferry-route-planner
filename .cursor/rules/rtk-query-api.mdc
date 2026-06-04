@@ -1,0 +1,138 @@
+---
+description: API calls use RTK Query; base URLs from .env, .env.uat, and .env.prod
+alwaysApply: true
+---
+
+# API — RTK Query + environment files
+
+Use **Redux Toolkit (RTK)** with two clear paths. **Never use axios.**
+
+| Context | Required APIs |
+|---------|----------------|
+| **API / HTTP integration** | `createApi`, `fetchBaseQuery`, `injectEndpoints`, generated hooks |
+| **Non-API Redux state** | `createSlice`, `createAsyncThunk` (local/async logic with no HTTP) |
+
+Non-Redux UI logic (component state, helpers) may use other patterns; see the forms rule for forms.
+
+## Environment files
+
+- **`.env`** — local / default API base URL and related vars
+- **`.env.uat`** — UAT/staging API config
+- **`.env.prod`** — production API config
+
+Read API base URLs from env vars (e.g. `VITE_API_URL`, `NEXT_PUBLIC_API_URL`) — never hardcode hosts in feature code.
+
+## API integration — RTK Query
+
+Any backend call (lists, detail, mutations, auth, uploads) **must** use:
+
+- `createApi` — define the API slice and shared config
+- `fetchBaseQuery` — base URL from env, headers, credentials
+- `injectEndpoints` — queries and mutations per domain
+- Generated hooks — `useXQuery`, `useXMutation` in components
+
+## Non-API Redux — slices and thunks
+
+When state lives in Redux but **does not call an HTTP API**, use:
+
+- `createSlice` — reducers, actions, synchronous state
+- `createAsyncThunk` — async work that is not an API request (e.g. read/write `localStorage`, IndexedDB, Web Crypto, delayed UI flows)
+
+Do **not** use `createAsyncThunk` to replace RTK Query for HTTP — route all API work through `createApi` / `fetchBaseQuery`.
+
+## Do not
+
+- Use **axios** — not in components, services, interceptors, or tests
+- Use raw `fetch` or ad-hoc data-fetch hooks for API calls outside RTK Query
+- Use `createAsyncThunk` for HTTP/API calls — use `createApi` + `fetchBaseQuery` instead
+- Hardcode API base URLs in components or services
+- Mix HTTP client patterns for the same API surface
+
+## Pattern — API (`createApi` + `fetchBaseQuery`)
+
+```ts
+// store/api/baseApi.ts
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+
+export const baseApi = createApi({
+  reducerPath: 'api',
+  baseQuery: fetchBaseQuery({ baseUrl: import.meta.env.VITE_API_URL }),
+  tagTypes: ['User'],
+  endpoints: () => ({}),
+});
+```
+
+```ts
+// store/api/usersApi.ts
+import { baseApi } from './baseApi';
+
+export const usersApi = baseApi.injectEndpoints({
+  endpoints: (build) => ({
+    getUsers: build.query<User[], void>({
+      query: () => '/users',
+      providesTags: ['User'],
+    }),
+    createUser: build.mutation<User, CreateUserDto>({
+      query: (body) => ({ url: '/users', method: 'POST', body }),
+      invalidatesTags: ['User'],
+    }),
+  }),
+});
+
+export const { useGetUsersQuery, useCreateUserMutation } = usersApi;
+```
+
+## Pattern — non-API (`createSlice` + `createAsyncThunk`)
+
+```ts
+// store/features/preferencesSlice.ts
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+
+export const loadPreferences = createAsyncThunk(
+  'preferences/load',
+  async () => JSON.parse(localStorage.getItem('prefs') ?? '{}'),
+);
+
+const preferencesSlice = createSlice({
+  name: 'preferences',
+  initialState: { theme: 'light' as 'light' | 'dark', status: 'idle' },
+  reducers: {
+    setTheme(state, action) {
+      state.theme = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(loadPreferences.fulfilled, (state, action) => {
+      Object.assign(state, action.payload);
+      state.status = 'idle';
+    });
+  },
+});
+
+export const { setTheme } = preferencesSlice.actions;
+export default preferencesSlice.reducer;
+```
+
+```tsx
+// ✅ GOOD — component consumes RTK Query hooks
+function UserList() {
+  const { data, isLoading, error } = useGetUsersQuery();
+  const [createUser] = useCreateUserMutation();
+  // ...
+}
+```
+
+```tsx
+// ❌ BAD — direct fetch in a component
+useEffect(() => {
+  fetch(`${import.meta.env.VITE_API_URL}/users`).then(/* ... */);
+}, []);
+```
+
+```ts
+// ❌ BAD — API work via createAsyncThunk instead of RTK Query
+export const fetchUsers = createAsyncThunk('users/fetch', async () => {
+  const res = await fetch(`${import.meta.env.VITE_API_URL}/users`);
+  return res.json();
+});
+```

@@ -8,6 +8,7 @@ import {
   studentSchema,
   type StudentFormValues,
 } from '@/features/routes/schemas/studentSchema';
+import { createId } from '@/utils/createId';
 
 interface StudentFormProps {
   planId: string;
@@ -45,7 +46,7 @@ export function StudentForm({
       addStudent({
         planId,
         student: {
-          id: crypto.randomUUID(),
+          id: createId(),
           name: values.name.trim(),
           phone: values.phone.trim(),
           lat: values.lat,

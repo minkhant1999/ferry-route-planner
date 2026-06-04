@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { STORAGE_KEY } from '@/constants/routeTypes';
+import { createId } from '@/utils/createId';
 import type {
   GeoStop,
   OptimizedLeg,
@@ -7,8 +8,6 @@ import type {
   RoutePlansState,
   Student,
 } from '@/types/geo';
-
-const createId = () => crypto.randomUUID();
 
 const defaultDepot: GeoStop = {
   id: createId(),

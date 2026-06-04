@@ -15,6 +15,7 @@ import {
   type RoutePlanFormValues,
 } from '@/features/routes/schemas/routePlanSchema';
 import type { StudentHomeValues } from '@/features/routes/schemas/studentSchema';
+import { createId } from '@/utils/createId';
 
 interface CreateRouteFormProps {
   onCreated?: (planId: string) => void;
@@ -49,11 +50,11 @@ export function CreateRouteForm({ onCreated }: CreateRouteFormProps) {
   });
 
   const onSubmit = handleSubmit((values) => {
-    const planId = crypto.randomUUID();
+    const planId = createId();
     const students = values.students
       .filter((s: StudentHomeValues) => s.name.trim().length > 0)
       .map((s: StudentHomeValues) => ({
-        id: crypto.randomUUID(),
+        id: createId(),
         name: s.name.trim(),
         phone: s.phone.trim(),
         lat: s.lat,

@@ -9,6 +9,7 @@ import type { RoutePlan } from '@/types/geo';
 import { studentHomeSchema } from '@/features/routes/schemas/studentSchema';
 import type { StudentHomeValues } from '@/features/routes/schemas/studentSchema';
 import { StudentLocationsEditor } from '@/features/routes/components/StudentLocationsEditor';
+import { createId } from '@/utils/createId';
 
 const planStopsSchema = z.object({
   students: z.array(studentHomeSchema),
@@ -48,7 +49,7 @@ export function PlanStudentBusStops({ plan }: PlanStudentBusStopsProps) {
     const students = values.students
       .filter((s) => s.name.trim().length > 0)
       .map((s) => ({
-        id: crypto.randomUUID(),
+        id: createId(),
         name: s.name.trim(),
         phone: s.phone.trim(),
         lat: s.lat,

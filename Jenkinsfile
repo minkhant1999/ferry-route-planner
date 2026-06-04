@@ -30,9 +30,11 @@ pipeline {
         script {
           def shortSha = env.GIT_COMMIT?.take(7) ?: 'unknown'
           env.IMAGE_TAG = "${env.BUILD_NUMBER}-${shortSha}"
-          docker.build("${IMAGE_NAME}:${env.IMAGE_TAG}", '.')
-          sh "docker tag ${IMAGE_NAME}:${env.IMAGE_TAG} ${IMAGE_NAME}:latest"
         }
+        sh """
+          docker build -t ${IMAGE_NAME}:${env.IMAGE_TAG} .
+          docker tag ${IMAGE_NAME}:${env.IMAGE_TAG} ${IMAGE_NAME}:latest
+        """
       }
     }
 

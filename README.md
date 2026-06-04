@@ -54,24 +54,28 @@ docker compose build --no-cache && docker compose up -d
 
 ## Jenkins
 
-Pipeline: checkout `dev` → setup Docker CLI → `docker build` → deploy container on port **9090**.
+Pipeline: checkout `dev` → `docker compose build` → `docker compose up -d` (same as on the VPS).
 
 - First deploy or after UI fixes: run with parameter **DOCKER_NO_CACHE** checked.
 - MCP (Cursor): copy `.cursor/mcp.json.example` → `.cursor/mcp.json`, set URL/token, reload MCP servers.
 
-### Jenkins in Docker on the VPS (required)
+### VPS: Jenkins must use host Docker
 
-Jenkins must reach the host Docker daemon. When starting Jenkins:
+Install Docker on the VPS and add the `jenkins` user to the `docker` group:
 
 ```bash
-docker run -d --name jenkins \
-  -p 8080:8080 \
-  -v jenkins_home:/var/jenkins_home \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  jenkins/jenkins:lts
+sudo apt update && sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker jenkins
+sudo systemctl restart jenkins
 ```
 
-If you see `docker: not found`, the pipeline installs a static Docker CLI automatically, but the **socket mount** above is still required for `docker build` / `docker run`.
+If Jenkins runs inside a Docker container, also mount the socket when starting it:
+
+```bash
+-v /var/run/docker.sock:/var/run/docker.sock
+```
+
+Verify: `sudo -u jenkins docker info` and `sudo -u jenkins docker compose version`.
 
 ## Project structure
 

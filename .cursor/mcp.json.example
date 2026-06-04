@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "jenkins": {
+      "command": "npx",
+      "args": ["-y", "jenkins-mcp-server"],
+      "env": {
+        "JENKINS_URL": "http://YOUR_JENKINS_HOST:8080",
+        "JENKINS_USERNAME": "your-jenkins-username",
+        "JENKINS_API_TOKEN": "your-jenkins-api-token"
+      }
+    }
+  }
+}

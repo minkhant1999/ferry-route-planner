@@ -10,6 +10,11 @@ pipeline {
   parameters {
     string(name: 'BRANCH', defaultValue: 'dev', description: 'Git branch to build and deploy')
     string(name: 'APP_PORT', defaultValue: '9090', description: 'Host port (maps to container port 80)')
+    booleanParam(
+      name: 'DOCKER_NO_CACHE',
+      defaultValue: false,
+      description: 'Force a full Docker rebuild (use after frontend fixes to avoid stale cached dist)'
+    )
   }
 
   options {
@@ -30,9 +35,11 @@ pipeline {
         script {
           def shortSha = env.GIT_COMMIT?.take(7) ?: 'unknown'
           env.IMAGE_TAG = "${env.BUILD_NUMBER}-${shortSha}"
+          env.DOCKER_BUILD_FLAGS = params.DOCKER_NO_CACHE ? '--no-cache' : ''
         }
         sh """
-          docker build -t ${IMAGE_NAME}:${env.IMAGE_TAG} .
+          set -e
+          docker build ${env.DOCKER_BUILD_FLAGS} -t ${IMAGE_NAME}:${env.IMAGE_TAG} .
           docker tag ${IMAGE_NAME}:${env.IMAGE_TAG} ${IMAGE_NAME}:latest
         """
       }
@@ -49,7 +56,27 @@ pipeline {
             --restart unless-stopped \\
             -p ${params.APP_PORT}:80 \\
             ${IMAGE_NAME}:${env.IMAGE_TAG}
-          docker ps --filter name=${CONTAINER_NAME}
+
+          echo "Waiting for container to become healthy..."
+          for i in \$(seq 1 30); do
+            status=\$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' ${CONTAINER_NAME} 2>/dev/null || echo "missing")
+            if [ "\$status" = "healthy" ] || [ "\$status" = "running" ]; then
+              if wget -q --spider http://127.0.0.1:${params.APP_PORT}/; then
+                echo "App is responding on port ${params.APP_PORT}."
+                docker ps --filter name=${CONTAINER_NAME}
+                exit 0
+              fi
+            fi
+            if [ "\$status" = "exited" ]; then
+              echo "Container exited:"
+              docker logs ${CONTAINER_NAME} || true
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "Deploy timed out waiting for healthy container."
+          docker logs ${CONTAINER_NAME} || true
+          exit 1
         """
       }
     }
@@ -58,9 +85,10 @@ pipeline {
   post {
     success {
       echo "Deployed ${IMAGE_NAME}:${env.IMAGE_TAG} → http://<host>:${params.APP_PORT}"
+      sh 'docker image prune -f || true'
     }
     failure {
-      sh "docker logs ${CONTAINER_NAME} 2>/dev/null | tail -50 || true"
+      sh "docker logs ${CONTAINER_NAME} 2>/dev/null | tail -80 || true"
     }
   }
 }

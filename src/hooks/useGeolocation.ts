@@ -11,21 +11,20 @@ interface UseGeolocationOptions {
   enabled?: boolean;
 }
 
+const unsupportedMessage = 'Geolocation is not supported in this browser';
+
+function isGeolocationSupported(): boolean {
+  return typeof navigator !== 'undefined' && !!navigator.geolocation;
+}
+
 export function useGeolocation(options: UseGeolocationOptions = {}) {
   const { enabled = true } = options;
+  const supported = isGeolocationSupported();
   const [position, setPosition] = useState<GeolocationPosition | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(enabled);
+  const [error, setError] = useState<string | null>(supported ? null : unsupportedMessage);
 
   useEffect(() => {
-    if (!enabled) {
-      setLoading(false);
-      return;
-    }
-
-    if (!navigator.geolocation) {
-      setError('Geolocation is not supported in this browser');
-      setLoading(false);
+    if (!enabled || !supported) {
       return;
     }
 
@@ -37,7 +36,6 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
           accuracy: coords.coords.accuracy,
         });
         setError(null);
-        setLoading(false);
       },
       (err) => {
         setError(
@@ -45,7 +43,6 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
             ? 'Location permission denied. Enable it in browser settings.'
             : err.message || 'Unable to get your location',
         );
-        setLoading(false);
       },
       {
         enableHighAccuracy: true,
@@ -55,7 +52,14 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [enabled]);
+  }, [enabled, supported]);
 
-  return { position, error, loading };
+  const active = enabled && supported;
+  const loading = active && position === null && error === null;
+
+  return {
+    position: active ? position : null,
+    error: active ? error : supported ? null : unsupportedMessage,
+    loading,
+  };
 }

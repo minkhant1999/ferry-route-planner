@@ -16,7 +16,8 @@ COPY . .
 ARG VITE_OSRM_URL=https://router.project-osrm.org
 ENV VITE_OSRM_URL=$VITE_OSRM_URL
 
-# Align with CI: optimize public images when present, then production build
+# Align with CI: lint, optimize public images when present, then production build
+RUN npm run lint
 RUN npm run optimize:images
 RUN npm run build
 

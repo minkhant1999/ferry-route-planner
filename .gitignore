@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# MCP secrets (use mcp.json.example as template)
+.cursor/mcp.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

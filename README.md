@@ -39,6 +39,26 @@ Route plans are saved in `localStorage`.
 
 Default: `VITE_OSRM_URL=https://router.project-osrm.org`
 
+## Docker (local / VPS)
+
+```bash
+docker compose up --build -d
+# App: http://localhost:9090
+```
+
+After frontend changes, rebuild without cache:
+
+```bash
+docker compose build --no-cache && docker compose up -d
+```
+
+## Jenkins
+
+Pipeline: checkout `dev` → `docker build` → deploy container on port **9090**.
+
+- First deploy or after UI fixes: run with parameter **DOCKER_NO_CACHE** checked.
+- MCP (Cursor): copy `.cursor/mcp.json.example` → `.cursor/mcp.json`, set URL/token, reload MCP servers.
+
 ## Project structure
 
 Follows `.cursor/rules/project-structure.mdc` — features under `src/features/routes/`, store under `src/store/`, shared UI in `src/components/`.

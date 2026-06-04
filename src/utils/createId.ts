@@ -1,12 +1,7 @@
 /**
- * Generates a UUID v4. Uses `crypto.randomUUID` when available (HTTPS),
- * otherwise falls back to `getRandomValues` or a simple polyfill for HTTP hosts.
+ * UUID v4 without `crypto.randomUUID` (unavailable on HTTP / non-secure origins).
  */
 export function createId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-
   if (typeof crypto !== 'undefined' && typeof crypto.getRandomValues === 'function') {
     const bytes = new Uint8Array(16);
     crypto.getRandomValues(bytes);

@@ -1,0 +1,104 @@
+---
+description: Docker, Compose, Kubernetes, and Jenkinsfile conventions for build and deploy
+alwaysApply: true
+---
+
+# Containers & CI/CD — Docker, Compose, Kubernetes, Jenkins
+
+Use these conventions when adding or editing `Dockerfile*`, `docker-compose*.yml`, Kubernetes manifests, or `Jenkinsfile`.
+
+## Layout
+
+| Artifact | Location |
+|----------|----------|
+| `Dockerfile`, `.dockerignore` | repo root or `deploy/docker/` |
+| Compose | `docker-compose.yml`, `docker-compose.*.yml` (override per env) |
+| Kubernetes | `k8s/` or `deploy/k8s/` — one manifest per resource or logical group |
+| Jenkins | `Jenkinsfile` at repo root |
+
+## Dockerfile
+
+- **Multi-stage**: `deps` → `build` → minimal **runtime** (e.g. `nginx:alpine` for static Vite output).
+- **Pin bases** with digest or explicit tags; prefer slim/Alpine images.
+- **Install**: `npm ci` (not `npm install`) when `package-lock.json` exists.
+- **Build-time env**: pass `VITE_*` via `ARG` / `ENV` at build stage only; never bake secrets into layers.
+- **User**: run as non-root (`USER node` or numeric UID) in the final stage.
+- **`.dockerignore`**: exclude `node_modules`, `.git`, `dist`, local `.env*`, and editor cruft.
+
+```dockerfile
+# ✅ GOOD — build args for Vite, static serve
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+```
+
+```dockerfile
+# ❌ BAD — secrets, root-only, dev install in prod image
+ENV API_KEY=sk_live_xxx
+RUN npm install && npm run build
+```
+
+## Docker Compose
+
+- Use **Compose v2** syntax (`services:`, no obsolete `version:` key unless required).
+- **Env files**: reference `.env` for local only; use `.env.uat` / `.env.prod` patterns consistent with the app — do not commit secrets.
+- **Build**: `build.context: .` with `args` mirroring Dockerfile `ARG`s for `VITE_*`.
+- **Ports / volumes**: document intent in service names (`app`, `api`); bind-mount source only in dev overrides.
+- **Health**: `healthcheck` on app services; `depends_on` with `condition: service_healthy` when order matters.
+
+## Kubernetes
+
+- **API**: `apps/v1` Deployment, `v1` Service; add Ingress only when routing is required.
+- **Labels**: standard selectors — `app.kubernetes.io/name`, `app.kubernetes.io/component`, `app.kubernetes.io/part-of`.
+- **Config**: ConfigMap for non-secret config; **Secret** (or external secret operator) for credentials — never plain env in manifests.
+- **Probes**: `livenessProbe` and `readinessProbe` on HTTP paths the app actually serves (e.g. `/` or `/health`).
+- **Resources**: set `requests` and `limits` on containers; one process per container unless sidecar is intentional.
+- **Images**: full registry path + immutable tag (or digest); `imagePullPolicy: IfNotPresent` locally, `Always` in prod if tags are reused.
+
+```yaml
+# ✅ GOOD — probes and resources
+readinessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 5
+resources:
+  requests:
+    memory: "64Mi"
+    cpu: "50m"
+```
+
+## Jenkinsfile
+
+- **Pipeline-as-code** in repo root; use **Declarative** pipeline unless Scripted is required.
+- **Agent**: `agent any` or label matching deploy target; pin tool versions to match CI (Node **22**, `npm ci`).
+- **Stages** (align with `.github/workflows/ci.yml` where applicable): Checkout → Install → Lint → Build → (optional) image build/push → deploy.
+- **Credentials**: `withCredentials` / Jenkins credential IDs — never echo secrets; mask in logs.
+- **Artifacts**: archive `dist/` or image tags; tag Docker images with `BUILD_NUMBER` or git SHA.
+- **Branches**: separate stages or jobs for UAT vs prod; promote the same image tag, do not rebuild per env without reason.
+
+```groovy
+// ✅ GOOD — install and build match project CI
+stage('Build') {
+  steps {
+    sh 'npm ci'
+    sh 'npm run lint'
+    sh 'npm run build'
+  }
+}
+```
+
+## Do not
+
+- Commit `.env` secrets, kubeconfig, or registry passwords.
+- Use `latest` as the only production image tag without a digest.
+- Run containers as root in production without justification.
+- Duplicate divergent build logic in Jenkins, Compose, and K8s — one Dockerfile is the source of truth for the app image.

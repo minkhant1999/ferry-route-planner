@@ -1,0 +1,21 @@
+# Build with env from disk: docker compose --env-file .env.prod up --build
+name: ferry-routes-planner
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_OSRM_URL: ${VITE_OSRM_URL:-https://router.project-osrm.org}
+    image: ferry-routes-planner:${IMAGE_TAG:-local}
+    container_name: ferry-routes-planner
+    ports:
+      - "${APP_PORT:-8080}:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3

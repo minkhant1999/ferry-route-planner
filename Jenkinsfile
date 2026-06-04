@@ -5,6 +5,7 @@ pipeline {
     GIT_REPO = 'https://github.com/minkhant1999/ferry-route-planner.git'
     IMAGE_NAME = 'ferry-routes-planner'
     CONTAINER_NAME = 'ferry-routes-planner'
+    DOCKER_CLI_VERSION = '27.4.1'
   }
 
   parameters {
@@ -30,6 +31,54 @@ pipeline {
       }
     }
 
+    stage('Setup Docker CLI') {
+      steps {
+        sh '''
+          set -euo pipefail
+          BIN_DIR="${WORKSPACE}/.bin"
+          mkdir -p "$BIN_DIR"
+
+          if command -v docker >/dev/null 2>&1; then
+            echo "Using system docker: $(command -v docker)"
+            ln -sf "$(command -v docker)" "$BIN_DIR/docker"
+          else
+            echo "Docker CLI not found; installing static binary ${DOCKER_CLI_VERSION}..."
+            ARCH=$(uname -m)
+            case "$ARCH" in
+              x86_64|amd64) ARCH=x86_64 ;;
+              aarch64|arm64) ARCH=aarch64 ;;
+              *)
+                echo "Unsupported architecture: $ARCH"
+                exit 1
+                ;;
+            esac
+            TMP=$(mktemp -d)
+            curl -fsSL \
+              "https://download.docker.com/linux/static/stable/${ARCH}/docker-${DOCKER_CLI_VERSION}.tgz" \
+              | tar -xzf - -C "$TMP" docker/docker
+            mv "$TMP/docker/docker" "$BIN_DIR/docker"
+            chmod +x "$BIN_DIR/docker"
+            rm -rf "$TMP"
+          fi
+
+          "$BIN_DIR/docker" version
+          if ! "$BIN_DIR/docker" info >/dev/null 2>&1; then
+            echo ""
+            echo "ERROR: Docker daemon is not reachable from Jenkins."
+            echo "If Jenkins runs in Docker, start it with:"
+            echo "  -v /var/run/docker.sock:/var/run/docker.sock"
+            echo "Example:"
+            echo "  docker run -d --name jenkins -p 8080:8080 -v jenkins_home:/var/jenkins_home \\"
+            echo "    -v /var/run/docker.sock:/var/run/docker.sock jenkins/jenkins:lts"
+            exit 1
+          fi
+        '''
+        script {
+          env.DOCKER_BIN = "${WORKSPACE}/.bin/docker"
+        }
+      }
+    }
+
     stage('Build image') {
       steps {
         script {
@@ -39,8 +88,8 @@ pipeline {
         }
         sh """
           set -e
-          docker build ${env.DOCKER_BUILD_FLAGS} -t ${IMAGE_NAME}:${env.IMAGE_TAG} .
-          docker tag ${IMAGE_NAME}:${env.IMAGE_TAG} ${IMAGE_NAME}:latest
+          ${env.DOCKER_BIN} build ${env.DOCKER_BUILD_FLAGS} -t ${IMAGE_NAME}:${env.IMAGE_TAG} .
+          ${env.DOCKER_BIN} tag ${IMAGE_NAME}:${env.IMAGE_TAG} ${IMAGE_NAME}:latest
         """
       }
     }
@@ -49,9 +98,9 @@ pipeline {
       steps {
         sh """
           set -e
-          docker stop ${CONTAINER_NAME} 2>/dev/null || true
-          docker rm ${CONTAINER_NAME} 2>/dev/null || true
-          docker run -d \\
+          ${env.DOCKER_BIN} stop ${CONTAINER_NAME} 2>/dev/null || true
+          ${env.DOCKER_BIN} rm ${CONTAINER_NAME} 2>/dev/null || true
+          ${env.DOCKER_BIN} run -d \\
             --name ${CONTAINER_NAME} \\
             --restart unless-stopped \\
             -p ${params.APP_PORT}:80 \\
@@ -59,23 +108,26 @@ pipeline {
 
           echo "Waiting for container to become healthy..."
           for i in \$(seq 1 30); do
-            status=\$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' ${CONTAINER_NAME} 2>/dev/null || echo "missing")
-            if [ "\$status" = "healthy" ] || [ "\$status" = "running" ]; then
-              if wget -q --spider http://127.0.0.1:${params.APP_PORT}/; then
-                echo "App is responding on port ${params.APP_PORT}."
-                docker ps --filter name=${CONTAINER_NAME}
-                exit 0
-              fi
+            status=\$(${env.DOCKER_BIN} inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' ${CONTAINER_NAME} 2>/dev/null || echo "missing")
+            if [ "\$status" = "healthy" ]; then
+              echo "Container is healthy."
+              ${env.DOCKER_BIN} ps --filter name=${CONTAINER_NAME}
+              exit 0
+            fi
+            if [ "\$status" = "running" ]; then
+              echo "Container is running."
+              ${env.DOCKER_BIN} ps --filter name=${CONTAINER_NAME}
+              exit 0
             fi
             if [ "\$status" = "exited" ]; then
               echo "Container exited:"
-              docker logs ${CONTAINER_NAME} || true
+              ${env.DOCKER_BIN} logs ${CONTAINER_NAME} || true
               exit 1
             fi
             sleep 2
           done
-          echo "Deploy timed out waiting for healthy container."
-          docker logs ${CONTAINER_NAME} || true
+          echo "Deploy timed out waiting for container."
+          ${env.DOCKER_BIN} logs ${CONTAINER_NAME} || true
           exit 1
         """
       }
@@ -85,10 +137,16 @@ pipeline {
   post {
     success {
       echo "Deployed ${IMAGE_NAME}:${env.IMAGE_TAG} → http://<host>:${params.APP_PORT}"
-      sh 'docker image prune -f || true'
+      script {
+        def docker = env.DOCKER_BIN ?: 'docker'
+        sh "${docker} image prune -f || true"
+      }
     }
     failure {
-      sh "docker logs ${CONTAINER_NAME} 2>/dev/null | tail -80 || true"
+      script {
+        def docker = env.DOCKER_BIN ?: 'docker'
+        sh "${docker} logs ${CONTAINER_NAME} 2>/dev/null | tail -80 || true"
+      }
     }
   }
 }

@@ -54,28 +54,29 @@ docker compose build --no-cache && docker compose up -d
 
 ## Jenkins
 
-Pipeline: checkout `dev` → `docker compose build` → `docker compose up -d` (same as on the VPS).
+Pipeline (same flow as manual VPS deploy):
 
-- First deploy or after UI fixes: run with parameter **DOCKER_NO_CACHE** checked.
-- MCP (Cursor): copy `.cursor/mcp.json.example` → `.cursor/mcp.json`, set URL/token, reload MCP servers.
+1. Git checkout (`dev`)
+2. Verify `git`, `docker`, `docker compose`
+3. `docker compose up -d --build`
+4. Health check `http://localhost:9090/`
 
-### VPS: Jenkins must use host Docker
+Polls GitHub every minute (`pollSCM`). For a full rebuild after UI fixes:
 
-Install Docker on the VPS and add the `jenkins` user to the `docker` group:
+```bash
+docker compose build --no-cache && docker compose up -d
+```
+
+### VPS setup
 
 ```bash
 sudo apt update && sudo apt install -y docker.io docker-compose-plugin
 sudo usermod -aG docker jenkins
 sudo systemctl restart jenkins
+sudo -u jenkins docker compose version
 ```
 
-If Jenkins runs inside a Docker container, also mount the socket when starting it:
-
-```bash
--v /var/run/docker.sock:/var/run/docker.sock
-```
-
-Verify: `sudo -u jenkins docker info` and `sudo -u jenkins docker compose version`.
+If Jenkins runs in Docker, mount `-v /var/run/docker.sock:/var/run/docker.sock`.
 
 ## Project structure
 

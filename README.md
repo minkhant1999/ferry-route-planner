@@ -76,7 +76,17 @@ sudo systemctl restart jenkins
 sudo -u jenkins docker compose version
 ```
 
-If Jenkins runs in Docker, mount `-v /var/run/docker.sock:/var/run/docker.sock`.
+If Jenkins runs in Docker (path `/var/jenkins_home/`), you **must** mount the host socket or builds fail with `docker: not found`:
+
+```bash
+docker run -d --name jenkins \
+  -p 8080:8080 \
+  -v jenkins_home:/var/jenkins_home \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  jenkins/jenkins:lts
+```
+
+The pipeline installs a Docker CLI in **Verify Tools** when it is missing, but the socket mount is still required.
 
 ## Project structure
 

@@ -1,25 +1,26 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
-import {
-  loadRoutePlans,
-  persistRoutePlans,
-} from '@/store/features/routePlansSlice';
+import { hydrateRoutePlans } from '@/store/features/routePlansSlice';
+import { writeRoutePlansToStorage } from '@/store/features/routePlansStorage';
 
+/**
+ * Loads route plans from localStorage on mount and saves after every change.
+ */
 export function RoutePlansPersistence() {
   const dispatch = useAppDispatch();
   const plans = useAppSelector((s) => s.routePlans.plans);
-  const hydrated = useRef(false);
+  const isHydrated = useAppSelector((s) => s.routePlans.isHydrated);
 
   useEffect(() => {
-    void dispatch(loadRoutePlans()).then(() => {
-      hydrated.current = true;
-    });
+    dispatch(hydrateRoutePlans());
   }, [dispatch]);
 
   useEffect(() => {
-    if (!hydrated.current) return;
-    void dispatch(persistRoutePlans(plans));
-  }, [dispatch, plans]);
+    if (!isHydrated) {
+      return;
+    }
+    writeRoutePlansToStorage(plans);
+  }, [plans, isHydrated]);
 
   return null;
 }

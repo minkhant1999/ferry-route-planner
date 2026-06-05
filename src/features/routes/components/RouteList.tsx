@@ -14,7 +14,9 @@ export function RouteList() {
     <Card title="Your route plans" className="app-card shadow-sm">
       <List
         dataSource={plans}
-        locale={{ emptyText: 'No routes yet. Create one to get started.' }}
+        locale={{
+          emptyText: 'No routes yet. Create one — it will be saved in this browser until you delete it.',
+        }}
         renderItem={(plan) => (
           <List.Item className="!flex-col !items-stretch gap-3 !px-0 sm:!flex-row sm:!items-center sm:!px-0">
             <List.Item.Meta

@@ -1,13 +1,15 @@
-import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { STORAGE_KEY } from '@/constants/routeTypes';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { createId } from '@/utils/createId';
+import { readRoutePlansFromStorage } from '@/store/features/routePlansStorage';
 import type {
   GeoStop,
   OptimizedLeg,
+  RouteDirection,
   RoutePlan,
   RoutePlansState,
   Student,
 } from '@/types/geo';
+import { buildLegStopSequence } from '@/utils/routeProgress';
 
 const defaultDepot: GeoStop = {
   id: createId(),
@@ -30,39 +32,41 @@ function normalizeStudent(student: Student): Student {
   };
 }
 
+function normalizeLeg(leg: OptimizedLeg | null): OptimizedLeg | null {
+  if (!leg) {
+    return null;
+  }
+  return {
+    ...leg,
+    reachedStopKeys: leg.reachedStopKeys ?? [],
+  };
+}
+
 function normalizePlan(plan: RoutePlan): RoutePlan {
   return {
     ...plan,
     students: plan.students.map(normalizeStudent),
+    morning: normalizeLeg(plan.morning),
+    evening: normalizeLeg(plan.evening),
   };
 }
-
-export const loadRoutePlans = createAsyncThunk('routePlans/load', async () => {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    return [] as RoutePlan[];
-  }
-  const plans = JSON.parse(raw) as RoutePlan[];
-  return plans.map(normalizePlan);
-});
-
-export const persistRoutePlans = createAsyncThunk(
-  'routePlans/persist',
-  async (plans: RoutePlan[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(plans));
-    return plans;
-  },
-);
 
 const initialState: RoutePlansState = {
   plans: [],
   selectedPlanId: null,
+  isHydrated: false,
 };
 
 const routePlansSlice = createSlice({
   name: 'routePlans',
   initialState,
   reducers: {
+    hydrateRoutePlans(state) {
+      const plans = readRoutePlansFromStorage().map(normalizePlan);
+      state.plans = plans;
+      state.selectedPlanId = plans[0]?.id ?? null;
+      state.isHydrated = true;
+    },
     selectPlan(state, action: PayloadAction<string | null>) {
       state.selectedPlanId = action.payload;
     },
@@ -184,11 +188,49 @@ const routePlansSlice = createSlice({
     ) {
       const plan = state.plans.find((p) => p.id === action.payload.planId);
       if (!plan) return;
-      if (action.payload.leg.direction === 'morning') {
-        plan.morning = action.payload.leg;
+      const leg = { ...action.payload.leg, reachedStopKeys: [] };
+      if (leg.direction === 'morning') {
+        plan.morning = leg;
       } else {
-        plan.evening = action.payload.leg;
+        plan.evening = leg;
       }
+      plan.updatedAt = new Date().toISOString();
+    },
+    markStopReached(
+      state,
+      action: PayloadAction<{
+        planId: string;
+        direction: RouteDirection;
+        stopKey: string;
+      }>,
+    ) {
+      const plan = state.plans.find((p) => p.id === action.payload.planId);
+      if (!plan) return;
+
+      const leg = action.payload.direction === 'morning' ? plan.morning : plan.evening;
+      if (!leg) return;
+
+      const reached = leg.reachedStopKeys ?? [];
+      const sequence = buildLegStopSequence(action.payload.direction, plan, leg);
+      const nextKey = sequence[reached.length]?.key;
+      if (nextKey !== action.payload.stopKey) {
+        return;
+      }
+
+      leg.reachedStopKeys = [...reached, action.payload.stopKey];
+      plan.updatedAt = new Date().toISOString();
+    },
+    resetLegProgress(
+      state,
+      action: PayloadAction<{ planId: string; direction: RouteDirection }>,
+    ) {
+      const plan = state.plans.find((p) => p.id === action.payload.planId);
+      if (!plan) return;
+
+      const leg = action.payload.direction === 'morning' ? plan.morning : plan.evening;
+      if (!leg) return;
+
+      leg.reachedStopKeys = [];
       plan.updatedAt = new Date().toISOString();
     },
     deletePlan(state, action: PayloadAction<string>) {
@@ -198,19 +240,10 @@ const routePlansSlice = createSlice({
       }
     },
   },
-  extraReducers: (builder) => {
-    builder
-      .addCase(loadRoutePlans.fulfilled, (state, action) => {
-        state.plans = action.payload;
-        state.selectedPlanId = action.payload[0]?.id ?? null;
-      })
-      .addCase(persistRoutePlans.fulfilled, (state, action) => {
-        state.plans = action.payload;
-      });
-  },
 });
 
 export const {
+  hydrateRoutePlans,
   selectPlan,
   addPlan,
   updatePlanMeta,
@@ -220,6 +253,8 @@ export const {
   removeStudent,
   setStudents,
   setOptimizedLeg,
+  markStopReached,
+  resetLegProgress,
   deletePlan,
 } = routePlansSlice.actions;
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert, Tag } from 'antd';
+import { Alert, Spin, Tag } from 'antd';
 import {
   OptimizePanel,
   RouteMap,
@@ -16,6 +16,7 @@ export function RoutePlannerPage() {
   const { planId } = useParams<{ planId: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const isHydrated = useAppSelector((s) => s.routePlans.isHydrated);
   const plan = useAppSelector((s) =>
     s.routePlans.plans.find((p) => p.id === planId),
   );
@@ -26,6 +27,14 @@ export function RoutePlannerPage() {
       dispatch(selectPlan(planId));
     }
   }, [dispatch, planId]);
+
+  if (!isHydrated) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center">
+        <Spin size="large" tip="Loading saved routes…" />
+      </div>
+    );
+  }
 
   if (!plan) {
     return (

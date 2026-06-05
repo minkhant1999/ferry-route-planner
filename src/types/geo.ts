@@ -27,6 +27,8 @@ export interface OptimizedLeg {
   distanceMeters: number;
   durationSeconds: number;
   geometry: [number, number][];
+  /** Stop keys reached in order (depot, student ids, school). */
+  reachedStopKeys?: string[];
 }
 
 export interface RoutePlan {
@@ -47,4 +49,6 @@ export interface RoutePlan {
 export interface RoutePlansState {
   plans: RoutePlan[];
   selectedPlanId: string | null;
+  /** False until plans are loaded from localStorage on app start. */
+  isHydrated: boolean;
 }

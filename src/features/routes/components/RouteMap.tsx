@@ -9,6 +9,7 @@ import { PickedLocationMarker } from '@/features/routes/components/map/PickedLoc
 import { useGeolocation } from '@/hooks/useGeolocation';
 import type { RoutePlan, RouteDirection } from '@/types/geo';
 import { copyToClipboardSync, formatCoord } from '@/utils/clipboard';
+import { getRemainingGeometry } from '@/utils/routeProgress';
 
 import 'leaflet/dist/leaflet.css';
 
@@ -63,6 +64,16 @@ export function RouteMap({ plan, activeDirection = 'both' }: RouteMapProps) {
 
   const showMorning = activeDirection === 'both' || activeDirection === 'morning';
   const showEvening = activeDirection === 'both' || activeDirection === 'evening';
+
+  const morningGeometry =
+    plan.morning && showMorning
+      ? getRemainingGeometry('morning', plan, plan.morning)
+      : [];
+
+  const eveningGeometry =
+    plan.evening && showEvening
+      ? getRemainingGeometry('evening', plan, plan.evening)
+      : [];
 
   const handleLocate = () => {
     if (!position) return;
@@ -125,16 +136,16 @@ export function RouteMap({ plan, activeDirection = 'both' }: RouteMapProps) {
             </Marker>
           ))}
 
-          {showMorning && plan.morning?.geometry.length ? (
+          {morningGeometry.length > 0 ? (
             <Polyline
-              positions={plan.morning.geometry.map(([lng, lat]) => [lat, lng])}
+              positions={morningGeometry.map(([lng, lat]) => [lat, lng])}
               pathOptions={{ color: COLORS.morning, weight: 5, opacity: 0.85 }}
             />
           ) : null}
 
-          {showEvening && plan.evening?.geometry.length ? (
+          {eveningGeometry.length > 0 ? (
             <Polyline
-              positions={plan.evening.geometry.map(([lng, lat]) => [lat, lng])}
+              positions={eveningGeometry.map(([lng, lat]) => [lat, lng])}
               pathOptions={{
                 color: COLORS.evening,
                 weight: 5,

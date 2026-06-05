@@ -4,6 +4,10 @@ import { AppButton } from '@/components';
 import type { RouteDirection, RoutePlan } from '@/types/geo';
 import { formatDistance, formatDuration } from '@/utils/geo';
 import { useRouteOptimization } from '@/features/routes/hooks/useRouteOptimization';
+import { useLegNavigation } from '@/features/routes/hooks/useLegNavigation';
+import { StopProgressList } from '@/features/routes/components/StopProgressList';
+import { useAppDispatch } from '@/store/hooks';
+import { markStopReached, resetLegProgress } from '@/store/features/routePlansSlice';
 
 interface OptimizePanelProps {
   plan: RoutePlan;
@@ -11,54 +15,14 @@ interface OptimizePanelProps {
   onMapViewChange: (view: RouteDirection | 'both') => void;
 }
 
-function StopOrderList({
-  plan,
-  leg,
-}: {
-  plan: RoutePlan;
-  leg: NonNullable<RoutePlan['morning']>;
-}) {
-  const studentMap = new Map(
-    plan.students.map((s) => [s.id, s.phone ? `${s.name} (${s.phone})` : s.name]),
-  );
-
-  return (
-    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
-      <li>{plan.depot.name} (home)</li>
-      {leg.stopIds.map((id) => (
-        <li key={id}>{studentMap.get(id) ?? 'Student'}</li>
-      ))}
-      <li>{plan.school.name} (school)</li>
-    </ol>
-  );
-}
-
-function EveningStopOrderList({
-  plan,
-  leg,
-}: {
-  plan: RoutePlan;
-  leg: NonNullable<RoutePlan['evening']>;
-}) {
-  const studentMap = new Map(
-    plan.students.map((s) => [s.id, s.phone ? `${s.name} (${s.phone})` : s.name]),
-  );
-
-  return (
-    <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-700">
-      <li>{plan.school.name} (school)</li>
-      {leg.stopIds.map((id) => (
-        <li key={id}>{studentMap.get(id) ?? 'Student'}</li>
-      ))}
-      <li>{plan.depot.name} (home)</li>
-    </ol>
-  );
-}
-
 export function OptimizePanel({ plan, mapView, onMapViewChange }: OptimizePanelProps) {
+  const dispatch = useAppDispatch();
   const { optimizeDirection, optimizeAll, isOptimizing, error } =
     useRouteOptimization(plan);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [navActive, setNavActive] = useState(true);
+
+  useLegNavigation(plan, mapView, navActive);
 
   const run = async (fn: () => Promise<void>) => {
     setLocalError(null);
@@ -76,7 +40,8 @@ export function OptimizePanel({ plan, mapView, onMapViewChange }: OptimizePanelP
     <Card title="Route optimization" className="app-card shadow-sm">
       <p className="mb-4 text-sm leading-relaxed text-slate-600">
         Plans the best pickup order, then loads real driving paths from OpenStreetMap
-        (OSRM).
+        (OSRM). Enable navigation to auto-mark stops when you arrive (~80 m) and trim
+        the route line on the map.
       </p>
 
       <div className="app-btn-stack mb-4">
@@ -109,6 +74,20 @@ export function OptimizePanel({ plan, mapView, onMapViewChange }: OptimizePanelP
         )}
       </div>
 
+      {(plan.morning || plan.evening) && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <AppButton
+            type={navActive ? 'primary' : 'default'}
+            size="small"
+            label={navActive ? 'Navigation on' : 'Navigation off'}
+            onClick={() => setNavActive((v) => !v)}
+          />
+          <span className="text-xs text-slate-500">
+            Uses your GPS to mark stops and hide driven route behind you.
+          </span>
+        </div>
+      )}
+
       {errorMessage ? (
         <Alert type="error" message={errorMessage} className="mb-4 text-sm" showIcon />
       ) : null}
@@ -135,7 +114,17 @@ export function OptimizePanel({ plan, mapView, onMapViewChange }: OptimizePanelP
                 {formatDuration(plan.morning.durationSeconds)}
               </span>
             </div>
-            <StopOrderList plan={plan} leg={plan.morning} />
+            <StopProgressList
+              plan={plan}
+              leg={plan.morning}
+              direction="morning"
+              onMarkReached={(stopKey) =>
+                dispatch(markStopReached({ planId: plan.id, direction: 'morning', stopKey }))
+              }
+              onResetProgress={() =>
+                dispatch(resetLegProgress({ planId: plan.id, direction: 'morning' }))
+              }
+            />
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-slate-200 p-3 text-sm text-slate-500 sm:p-4">
@@ -152,7 +141,17 @@ export function OptimizePanel({ plan, mapView, onMapViewChange }: OptimizePanelP
                 {formatDuration(plan.evening.durationSeconds)}
               </span>
             </div>
-            <EveningStopOrderList plan={plan} leg={plan.evening} />
+            <StopProgressList
+              plan={plan}
+              leg={plan.evening}
+              direction="evening"
+              onMarkReached={(stopKey) =>
+                dispatch(markStopReached({ planId: plan.id, direction: 'evening', stopKey }))
+              }
+              onResetProgress={() =>
+                dispatch(resetLegProgress({ planId: plan.id, direction: 'evening' }))
+              }
+            />
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-slate-200 p-3 text-sm text-slate-500 sm:p-4">
@@ -162,7 +161,7 @@ export function OptimizePanel({ plan, mapView, onMapViewChange }: OptimizePanelP
       </div>
 
       <p className="mt-4 text-xs text-slate-500">
-        Blue = morning · dashed purple = evening
+        Blue = morning · dashed purple = evening · reached segments disappear from the map
       </p>
     </Card>
   );

@@ -10,7 +10,7 @@ import {
 import type { RouteDirection } from '@/types/geo';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { selectPlan } from '@/store/features/routePlansSlice';
-import { AppButton } from '@/components';
+import { AppButton, LocationPermissionButton } from '@/components';
 
 export function RoutePlannerPage() {
   const { planId } = useParams<{ planId: string }>();
@@ -70,11 +70,14 @@ export function RoutePlannerPage() {
             <Tag>{plan.students.length} bus stops</Tag>
           </div>
         </div>
-        <AppButton
-          className="w-full shrink-0 sm:w-auto"
-          label="← All routes"
-          onClick={() => navigate('/')}
-        />
+        <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <LocationPermissionButton className="w-full sm:w-auto" />
+          <AppButton
+            className="w-full sm:w-auto"
+            label="← All routes"
+            onClick={() => navigate('/')}
+          />
+        </div>
       </div>
 
       <RouteMap plan={plan} activeDirection={mapView} />

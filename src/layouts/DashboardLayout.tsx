@@ -11,11 +11,9 @@ export function DashboardLayout() {
           to="/"
           className="text-base font-semibold text-white no-underline sm:text-lg"
         >
-          BusRoute Planner
+          Route Planner
         </Link>
-        <span className="text-xs leading-snug text-slate-300 sm:text-sm">
-          School ferry routes · morning &amp; evening
-        </span>
+     
       </Header>
       <Content className="mx-auto w-full max-w-6xl px-3 py-4 sm:px-4 sm:py-6 md:px-6 md:py-8">
         <Outlet />

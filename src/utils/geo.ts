@@ -36,3 +36,7 @@ export function formatDuration(seconds: number): string {
 export function isValidCoordinate(lat: number, lng: number): boolean {
   return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
+
+export function roundCoordinate(value: number, decimals = 6): number {
+  return Number(value.toFixed(decimals));
+}

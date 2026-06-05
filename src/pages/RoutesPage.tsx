@@ -8,8 +8,8 @@ export function RoutesPage() {
           School Bus Route Planner
         </h1>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-600">
-          Set home location, school location, and bus stops (student homes) in between.
-          Use <strong>Add More</strong> for each student stop, then optimize morning and
+          Set start point, end point, and stops in between.
+          Use <strong>Add More</strong> for each stop, then you can also optimize morning and
           evening routes on the map.
         </p>
       </div>

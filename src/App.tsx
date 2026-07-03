@@ -1,20 +1,14 @@
 import { BrowserRouter, useRoutes } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import { Provider } from 'react-redux';
-import { DashboardLayout } from '@/layouts/DashboardLayout';
+import { AuthPersistence } from '@/hooks/useAuthPersistence';
+import { HousesPersistence } from '@/hooks/useHousesPersistence';
 import { RoutePlansPersistence } from '@/hooks/useRoutePlansPersistence';
 import { appRoutes } from '@/routes';
 import { store } from '@/store';
 
 function AppRoutes() {
-  const element = useRoutes([
-    {
-      path: '/',
-      element: <DashboardLayout />,
-      children: appRoutes,
-    },
-  ]);
-  return element;
+  return useRoutes(appRoutes);
 }
 
 export default function App() {
@@ -29,6 +23,8 @@ export default function App() {
         }}
       >
         <BrowserRouter>
+          <AuthPersistence />
+          <HousesPersistence />
           <RoutePlansPersistence />
           <AppRoutes />
         </BrowserRouter>

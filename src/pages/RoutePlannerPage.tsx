@@ -11,6 +11,7 @@ import type { RouteDirection } from '@/types/geo';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { selectPlan } from '@/store/features/routePlansSlice';
 import { AppButton, LocationPermissionButton } from '@/components';
+import { DELIVERY_ROUTE_PLANNER_PATH } from '@/constants/services';
 
 export function RoutePlannerPage() {
   const { planId } = useParams<{ planId: string }>();
@@ -47,7 +48,7 @@ export function RoutePlannerPage() {
           <AppButton
             className="mt-2 w-full sm:mt-0 sm:w-auto"
             label="Back to routes"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(DELIVERY_ROUTE_PLANNER_PATH)}
           />
         }
       />
@@ -75,7 +76,7 @@ export function RoutePlannerPage() {
           <AppButton
             className="w-full sm:w-auto"
             label="← All routes"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(DELIVERY_ROUTE_PLANNER_PATH)}
           />
         </div>
       </div>

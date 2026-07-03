@@ -1,6 +1,7 @@
 import { Card, List, Tag } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { AppButton } from '@/components';
+import { DELIVERY_ROUTE_PLANNER_PATH } from '@/constants/services';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { deletePlan, selectPlan } from '@/store/features/routePlansSlice';
 import { formatDistance, formatDuration } from '@/utils/geo';
@@ -56,7 +57,7 @@ export function RouteList() {
                 label="Open"
                 onClick={() => {
                   dispatch(selectPlan(plan.id));
-                  navigate(`/routes/${plan.id}`);
+                  navigate(`${DELIVERY_ROUTE_PLANNER_PATH}/${plan.id}`);
                 }}
               />
               <AppButton

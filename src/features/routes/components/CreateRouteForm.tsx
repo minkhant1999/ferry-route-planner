@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from 'antd';
 import { AppButton, FormInput, FormSelect } from '@/components';
 import { GRADE_PRESETS, ROUTE_SCHEDULE_OPTIONS } from '@/constants/routeTypes';
+import { DELIVERY_ROUTE_PLANNER_PATH } from '@/constants/services';
 import { useAppDispatch } from '@/store/hooks';
 import { addPlan } from '@/store/features/routePlansSlice';
 import {
@@ -118,7 +119,7 @@ export function CreateRouteForm({ onCreated }: CreateRouteFormProps) {
     );
     reset();
     onCreated?.(planId);
-    navigate(`/routes/${planId}`);
+    navigate(`${DELIVERY_ROUTE_PLANNER_PATH}/${planId}`);
   });
 
   return (

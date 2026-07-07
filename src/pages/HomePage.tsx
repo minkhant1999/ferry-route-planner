@@ -30,11 +30,7 @@ export function HomePage() {
                 Get started
               </AppButton>
             </Link>
-            <Link to="/services/delivery" className="no-underline">
-              <AppButton size="large" className="!border-white/30 !bg-white/10 !text-white">
-                Delivery services
-              </AppButton>
-            </Link>
+            
           </div>
         </div>
       </section>
